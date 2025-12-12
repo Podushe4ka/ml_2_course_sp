@@ -144,24 +144,24 @@ def AdditiveWintersExponentialSmoothing(x, h, Params):
     gamma = Params['gamma']
     p = Params['seasonality_period']
     
-    FORECAST = [np.NaN]*(T+h)
+    FORECAST = [np.nan]*(T+h)
     
-    l= np.NaN
+    l= np.nan
     s= []
     
     for cntr in range(T):
-        if not math.isnan(x[cntr]):
+        if not math.isnan(x.iloc[cntr]):
             if math.isnan(l):
-                l= x[cntr]
+                l= x.iloc[cntr]
             if len(s)==0:
                 # looking in the future
                 for i in range(p):
-                    s.append(x[i])
+                    s.append(x.iloc[i])
             if cntr<p:
-                l = alpha*(x[cntr]-s[cntr])+(1-alpha)*l # recurrent smoothing of level 
+                l = alpha*(x.iloc[cntr]-s[cntr])+(1-alpha)*l # recurrent smoothing of level 
             else:
-                s.append(gamma*(x[cntr]-l)+(1-gamma)*s[cntr-p])
-                l = alpha*(x[cntr]-s[cntr-p])+(1-alpha)*l # recurrent smoothing of level 
+                s.append(gamma*(x.iloc[cntr]-l)+(1-gamma)*s[cntr-p])
+                l = alpha*(x.iloc[cntr]-s[cntr-p])+(1-alpha)*l # recurrent smoothing of level 
                 
         FORECAST[cntr+h] = l + s[cntr+h-(1+h//p)*p]
     return FORECAST
@@ -174,32 +174,32 @@ def TheilWageExponentialSmoothing(x, h, Params):
     gamma = Params['gamma']
     p = Params['seasonality_period']
     
-    FORECAST = [np.NaN]*(T+h)
+    FORECAST = [np.nan]*(T+h)
     
-    l= np.NaN
-    b=np.NaN
+    l= np.nan
+    b=np.nan
     s= []
     
     for cntr in range(T):
-        if not math.isnan(x[cntr]):
+        if not math.isnan(x.iloc[cntr]):
             if math.isnan(l):
-                l= x[cntr]
+                l= x.iloc[cntr]
             if math.isnan(b):
                 b= 0
             
             if len(s)==0:
                 for i in range(p):
-                    s.append(x[i])
+                    s.append(x.iloc[i])
                     
                     
             if cntr<p:
                 l_old=l
-                l = alpha*(x[cntr]-s[cntr])+(1-alpha)*(l+b)
+                l = alpha*(x.iloc[cntr]-s[cntr])+(1-alpha)*(l+b)
                 b=beta*(l-l_old)+(1-beta)*b
             else:
                 l_old=l
-                s.append(gamma*(x[cntr]-l)+(1-gamma)*s[cntr-p])
-                l = alpha*(x[cntr]-s[cntr-p])+(1-alpha)*(l+b) # recurrent smoothing of level 
+                s.append(gamma*(x.iloc[cntr]-l)+(1-gamma)*s[cntr-p])
+                l = alpha*(x.iloc[cntr]-s[cntr-p])+(1-alpha)*(l+b) # recurrent smoothing of level 
                 b=beta*(l-l_old)+(1-beta)*b
             
         FORECAST[cntr+h] = l+b + s[cntr+h - (1+h//p)*p]
@@ -261,6 +261,41 @@ def AdaptiveExponentialSmoothing(x, h, Params):
                 y = y*(1-alpha) + (alpha)*x[t]
         FORECAST[t+h] = y
     return FORECAST
+
+
+def MultiplicativeWintersExponentialSmoothing(x, h, Params):
+    T = len(x)
+    alpha = Params['alpha']
+    beta = Params['beta']
+    gamma = Params['gamma']
+    p = Params['seasonality_period']
+    
+    FORECAST = [np.nan]*(T+h)
+    l = np.nan 
+    b = 0  
+    s = []  
+    
+    for cntr in range(T):
+        if not math.isnan(x.iloc[cntr]):
+            if math.isnan(l):
+                l = x.iloc[cntr]
+            if len(s) == 0:
+                for i in range(p):
+                    s.append(x.iloc[i]/l)
+            
+            if cntr < p:
+                l_new = alpha*(x.iloc[cntr]/ s[cntr]) + (1-alpha)*(l + b)
+            else:
+                l_new = alpha*(x.iloc[cntr]/ s[cntr - p]) + (1 - alpha)* (l + b)
+                s.append(gamma*(x.iloc[cntr]/ l_new) + (1 - gamma)*s[cntr - p])
+            
+            b = beta*(l_new - l) + (1 - beta)*b
+            l = l_new
+            
+        FORECAST[cntr+h] = (l + h* b) * s[cntr + h - (1 +h // p) * p]
+    
+    return FORECAST
+
 
 # generate forecast values based on particular algorithm
 # h - forecast horizon, each point in historical period will be forecasted with delay = h (h-step ahead)
@@ -459,3 +494,4 @@ def get_autoregrmatrix(x,h,K):
                           np.hstack((x[T-h-K:T-h]))) # is needed to repeat x[-K] in second part
     y = x[K+h-1:]
     return X,y
+
